@@ -1,0 +1,7 @@
+node_modules
+bitmaps
+font-dev.js
+.DS_Store
+npm-debug.log
+package-lock.json
+*.swp

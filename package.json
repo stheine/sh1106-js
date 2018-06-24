@@ -1,0 +1,40 @@
+{
+  "name": "sh1106-js",
+  "version": "0.0.0",
+  "description": "NodeJS library for controlling SH1106 I2C OLED screens on the Raspbery Pi",
+  "main": "oled.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stheine/sh1106-js.git"
+  },
+  "keywords": [
+    "Raspbery Pi",
+    "pi",
+    "raspi",
+    "rpi",
+    "oled",
+    "SH1106"
+  ],
+  "author": [
+    "Normen Hansen",
+    "Judd Flamm",
+    "Suz Hinton",
+    "Per Johan Groland",
+    "Stefan Heine"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=8.0.0 <9"
+  },
+  "dependencies": {
+    "delay": "^3.0.0",
+    "i2c": "^0.2.3",
+    "oled-font-5x7": "^1.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.0.0"
+  }
+}
