@@ -1,133 +1,110 @@
 'use strict';
 
-var i2c = require('i2c');
+/* eslint-disable id-length */
+/* eslint-disable no-bitwise */
+/* eslint-disable no-underscore-dangle */
+/* eslint-disable class-methods-use-this */
+/* eslint-disable no-console */ // TODO
 
+const I2c = require('i2c');
+
+/* eslint-disable no-unused-vars */
+const HEIGHT         = 64;
+const WIDTH          = 128;
+const DATA_SIZE      = 16;
 const MAX_PAGE_COUNT = 8;
 
-const SET_PAGE_ADDRESS                     = 0xB0; /* sets the page address from 0 to 7 */
-const DISPLAY_OFF                          = 0xAE;
-const DISPLAY_ON                           = 0xAF;
-const SET_MEMORY_ADDRESSING_MODE           = 0x20;
-const SET_COM_OUTPUT_SCAN_DIRECTION        = 0xC8;
-const LOW_COLUMN_ADDRESS                   = 0x00;
-const HIGH_COLUMN_ADDRESS                  = 0x10;
-const START_LINE_ADDRESS                   = 0x40;
-const SET_CONTRAST_CTRL_REG                = 0x81;
-const SET_SEGMENT_REMAP                    = 0xA1; // 0 to 127
-const SET_NORMAL_DISPLAY                   = 0xA6;
-const SET_REVERSE_DISPLAY                  = 0xA7;
-const SET_MULTIPLEX_RATIO                  = 0xA8;
-const OUTPUT_FOLLOWS_RAM                   = 0xA4;
-const OUTPUT_IGNORES_RAM                   = 0xA5;
-
-const SET_DISPLAY_OFFSET                   = 0xD3;
-const SET_DISPLAY_CLOCK_DIVIDE             = 0xD5;
-const SET_PRE_CHARGE_PERIOD                = 0xD9;
-const SET_COM_PINS_HARDWARE_CONFIG         = 0xDA;
-const SET_VCOMH                            = 0xDB;
-const SET_DC_DC_ENABLE                     = 0x8D;
+const SET_DISPLAY_START_LINE           = 0x40;
+const DISPLAY_OFF                      = 0xAE;
+const DISPLAY_ON                       = 0xAF;
+const SET_ENTIRE_DISPLAY_OFF           = 0xA4;
+const SET_ENTIRE_DISPLAY_ON            = 0xA5;
+const SET_MULTIPLEX_RATIO              = 0xA8;
+const SET_DISPLAY_OFFSET               = 0xD3;
+const SET_DISPLAY_CLOCK_DIVIDE         = 0xD5;
+const SET_DC_DC_CONTROL_MODE           = 0xAD;
+const SET_DC_DC_ENABLE                 = 0x8B;
+const SET_PRE_CHARGE_PERIOD            = 0xD9;
+const SET_VCOMH                        = 0xDB;
+const SET_PUMP_VOLTAGE                 = 0x32;
+const SET_CONTRAST_CTRL_MODE           = 0x81;
+const SET_NORMAL_DISPLAY               = 0xA6;
+const SET_REVERSE_DISPLAY              = 0xA7;
+const SET_COMMON_PADS_HARDWARE_MODE    = 0xDA;
+const SET_SEGMENT_REMAP                = 0xA1;
+const SET_COMMON_OUTPUT_SCAN_DIRECTION = 0xC8;
+const SET_PAGE_ADDRESS                 = 0xB0; /* sets the page address from 0 to 7 */
+/* eslint-enable no-unused-vars */
 
 class Oled {
   constructor(opts) {
     opts = opts || {};
 
-    this.HEIGHT = opts.height || 64;
-    this.WIDTH = opts.width || 128;
     this.ADDRESS = opts.address || 0x3C;
-    this.DEVICE = opts.device || '/dev/i2c-1';
-    this.MICROVIEW = opts.microview || false;
-    this.DATA_SIZE = opts.datasize || 16;
-
-    // create command buffers
-
-    this.cursor_x = 0;
-    this.cursor_y = 0;
+    this.DEVICE  = opts.device  || '/dev/i2c-1';
 
     // new blank buffer
-    this.buffer = Buffer.alloc((this.WIDTH * this.HEIGHT) / 8, 0x00);
-
+    this.buffer     = Buffer.alloc((WIDTH * HEIGHT) / 8, 0x00);
     this.dirtyBytes = [];
 
-    var config = {
-      '128x64': {
-        'multiplex': 0x3F,
-        'compins': 0x12,
-        'coloffset': 0
-      },
-    };
+    // setup i2c
+    this.wire = new I2c(this.ADDRESS, {device: this.DEVICE});
 
-    // Setup i2c
-    this.wire = new i2c(this.ADDRESS, {device: this.DEVICE});
-
-    var screenSize    = `${this.WIDTH}x${this.HEIGHT}`;
-    this.screenConfig = config[screenSize];
+    // Cursor position for text
+    this.cursorX = 0;
+    this.cursorY = 0;
   }
 
   async initialize() {
     // sequence of bytes to initialize with
-    var initSeq = [
+    const initSeq = [
       DISPLAY_OFF,
-      SET_MEMORY_ADDRESSING_MODE, 0x02, // 0x00 HORIZONTAL, 0x01 VERTICAL, 0x02 PAGE
-      SET_PAGE_ADDRESS, // start at page address 0
-      SET_COM_OUTPUT_SCAN_DIRECTION,
-      LOW_COLUMN_ADDRESS,
-      HIGH_COLUMN_ADDRESS,
-      START_LINE_ADDRESS,
-      SET_CONTRAST_CTRL_REG, 0x7F,
-      SET_SEGMENT_REMAP,
-      SET_NORMAL_DISPLAY,
+      SET_ENTIRE_DISPLAY_OFF,
+      SET_DISPLAY_CLOCK_DIVIDE, 0x50,
       SET_MULTIPLEX_RATIO, 0x3F,
-      OUTPUT_FOLLOWS_RAM,
-      SET_DISPLAY_OFFSET, 0x00,  // no offset
-      SET_DISPLAY_CLOCK_DIVIDE, 0xF0,
+      SET_DISPLAY_OFFSET, 0x00,
+      SET_DISPLAY_START_LINE,
+      SET_DC_DC_CONTROL_MODE,
+      SET_DC_DC_ENABLE,
       SET_PRE_CHARGE_PERIOD, 0x22,
-      SET_COM_PINS_HARDWARE_CONFIG, 0x12,
-      SET_VCOMH, 0x20, // 0.77xVcc
-      SET_DC_DC_ENABLE, 0x14,
+      SET_VCOMH, 0x35,
+      SET_PUMP_VOLTAGE,
+      SET_CONTRAST_CTRL_MODE, 0xFF,
+      SET_NORMAL_DISPLAY,
+      SET_COMMON_PADS_HARDWARE_MODE, 0x12,
+      SET_SEGMENT_REMAP,
+      SET_COMMON_OUTPUT_SCAN_DIRECTION,
       DISPLAY_ON,
     ];
 
-    var i, initSeqLen = initSeq.length;
-
     // write init seq commands
-    for (i = 0; i < initSeqLen; i ++) {
-      await this._transfer('cmd', initSeq[i]);
-    }
+    this._transferCmd(initSeq);
   }
 
-  // writes both commands and data buffers to this device
-  async _transfer(type, val) {
-    var control;
-    if (type === 'data') {
-      console.log('_transfer(data)');
-      control = 0x40;
-    } else if (type === 'cmd') {
-//      console.log('_transfer(cmd)', '0x' + val.toString(16));
-      control = 0x00;
-    } else {
-      return;
+  async _transferCmd(cmds) {
+    if(typeof cmds === 'number') {
+      cmds = [cmds];
     }
-    await new Promise((resolve, reject) => {
-      this.wire.writeBytes(control, [val], err => {
-        if(err) {
-          return reject();
-        }
 
-        resolve();
+    cmds.map(async cmd => {
+      await new Promise((resolve, reject) => {
+        this.wire.writeBytes(0x00, [cmd], err => {
+          if(err) {
+            return reject();
+          }
+
+          resolve();
+        });
       });
     });
   }
 
-  async _transferData(val) {
-//    console.log('_transferData', val.length);
-
-    let control = 0x40;
-    var size = this.DATA_SIZE;
-    for (var i=0; i<val.length; i+=size) {
-      var smallarray = val.slice(i,i+size);
+  async _transferData(data) {
+    for(let i = 0; i < data.length; i += DATA_SIZE) {
+      const smallarray = data.slice(i, i + DATA_SIZE);
 
       await new Promise((resolve, reject) => {
-        this.wire.writeBytes(control, smallarray, err => {
+        this.wire.writeBytes(0x40, smallarray, err => {
           if(err) {
             return reject();
           }
@@ -140,7 +117,11 @@ class Oled {
 
   // read a byte from the oled
   _readI2C(fn) {
-    this.wire.readByte(function(err, data) {
+    this.wire.readByte((err, data) => {
+      if(err) {
+        throw err;
+      }
+
       fn(data);
     });
   }
@@ -148,100 +129,112 @@ class Oled {
   // sometimes the oled gets a bit busy with lots of bytes.
   // Read the response byte to see if this is the case
   _waitUntilReady() {
-    return new Promise(resolve => {
-      var done,
-          oled = this;
+    // TODO
+    // not sure if this might still be required,
+    // or if has been obsoleted by async/await handling in wire.writeBytes!?
 
-      function tick() {
-        oled._readI2C(function(byte) {
+    /* eslint-disable multiline-comment-style */
+    /*
+    return new Promise(resolve => {
+      const tick = () => {
+        this._readI2C(byte => {
           // read the busy byte in the response
           const busy = byte >> 7 & 1;
-          if (!busy) {
+
+          if(busy) {
+            process.nextTick(tick);
+          } else {
             // if not busy, it's ready for callback
             return resolve();
-          } else {
-            process.nextTick(tick);
           }
         });
-      }
+      };
+
       process.nextTick(tick);
-    });
+    }); */
+    /* eslint-enable multiline-comment-style */
   }
 
   // set starting position of a text string on the oled
   setCursor(x, y) {
-    this.cursor_x = x;
-    this.cursor_y = y;
+    this.cursorX = x;
+    this.cursorY = y;
   }
 
   // write text to the oled
   async writeString(font, size, string, color, wrap, linespacing, sync = true) {
-    var wordArr = string.split(' '),
-        len = wordArr.length,
-        // start x offset at cursor pos
-        offset = this.cursor_x,
-        padding = 0, letspace = 1;
-    var leading = linespacing || 2;
+    const wordArr = string.split(' ');
+    const len = wordArr.length;
+    // start x offset at cursor pos
+    let   offset   = this.cursorX;
+    let   padding  = 0;
+    const letspace = 1;
+    const leading  = linespacing || 2;
 
     // loop through words
-    for (var w = 0; w < len; w += 1) {
+    for(let w = 0; w < len; w += 1) {
       // put the word space back in
       wordArr[w] += ' ';
-      var stringArr = wordArr[w].split(''),
-          slen = stringArr.length,
-          compare = (font.width * size * slen) + (size * (len -1));
+      const stringArr = wordArr[w].split('');
+      const slen      = stringArr.length;
+      const compare   = (font.width * size * slen) + (size * (len - 1));
 
       // wrap words if necessary
-      if (wrap && len > 1 && (offset >= (this.WIDTH - compare)) ) {
+      if(wrap && len > 1 && (offset >= (WIDTH - compare))) {
         offset = 1;
-        this.cursor_y += (font.height * size) + size + leading;
-        this.setCursor(offset, this.cursor_y);
+        this.cursorY += (font.height * size) + size + leading;
+        this.setCursor(offset, this.cursorY);
       }
 
       // loop through the array of each char to draw
-      for (var i = 0; i < slen; i += 1) {
+      for(let i = 0; i < slen; i += 1) {
         // look up the position of the char, pull out the buffer slice
-        var charBuf = this._findCharBuf(font, stringArr[i]);
+        const charBuf = this._findCharBuf(font, stringArr[i]);
         // read the bits in the bytes that make up the char
-        var charBytes = this._readCharBytes(charBuf);
+        const charBytes = this._readCharBytes(charBuf);
+
         // draw the entire character
         this._drawChar(font, charBytes, size, false);
 
         // calc new x position for the next char, add a touch of padding too if it's a non space char
-        padding = (stringArr[i] === ' ') ? 0 : size + letspace;
+        padding = stringArr[i] === ' ' ? 0 : size + letspace;
         offset += (font.width * size) + padding;
 
         // wrap letters if necessary
-        if (wrap && (offset >= (this.WIDTH - font.width - letspace))) {
+        if(wrap && (offset >= (WIDTH - font.width - letspace))) {
           offset = 1;
-          this.cursor_y += (font.height * size) + size + leading;
+          this.cursorY += (font.height * size) + size + leading;
         }
         // set the 'cursor' for the next char to be drawn, then loop again for next char
-        this.setCursor(offset, this.cursor_y);
+        this.setCursor(offset, this.cursorY);
       }
     }
+
     if(sync) {
       await this._updateDirtyBytes(this.dirtyBytes);
     }
   }
 
   // draw an individual character to the screen
-  _drawChar(font, byteArray, size, sync = true) {
+  _drawChar(font, byteArray, size) {
     // take your positions...
-    var x = this.cursor_x,
-        y = this.cursor_y;
+    const x = this.cursorX;
+    const y = this.cursorY;
 
-    var pagePos = 0;
-    var c = 0;
+    let   pagePos = 0;
+    let   c = 0;
+
     // loop through the byte array containing the hexes for the char
-    for (var i = 0; i < byteArray.length; i += 1) {
+    for(let i = 0; i < byteArray.length; i += 1) {
       pagePos = Math.floor(i / font.width) * 8;
-      for (var j = 0; j < 8; j += 1) {
+      for(let j = 0; j < 8; j += 1) {
         // pull color out
-        var color = byteArray[i][j],
-            xpos, ypos;
+        const color = byteArray[i][j];
+        let   xpos;
+        let   ypos;
+
         // standard font size
-        if (size === 1) {
+        if(size === 1) {
           xpos = x + c;
           ypos = y + j + pagePos;
           this.drawPixel([xpos, ypos, color], false);
@@ -252,71 +245,68 @@ class Oled {
           this.fillRect(xpos, ypos, size, size, color, false);
         }
       }
-      c = (c < font.width -1) ? c += 1 : 0;
+      c = c < font.width - 1 ? c += 1 : 0;
     }
   }
 
   // get character bytes from the supplied font object in order to send to framebuffer
   _readCharBytes(byteArray) {
-    var bitArr = [],
-        bitCharArr = [];
+    let   bitArr = [];
+    const bitCharArr = [];
+
     // loop through each byte supplied for a char
-    for (var i = 0; i < byteArray.length; i += 1) {
+    for(let i = 0; i < byteArray.length; i += 1) {
       // set current byte
-      var byte = byteArray[i];
+      const byte = byteArray[i];
+
       // read each byte
-      for (var j = 0; j < 8; j += 1) {
+      for(let j = 0; j < 8; j += 1) {
         // shift bits right until all are read
-        var bit = byte >> j & 1;
+        const bit = byte >> j & 1;
+
         bitArr.push(bit);
       }
+
       // push to array containing flattened bit sequence
       bitCharArr.push(bitArr);
       // clear bits for next byte
       bitArr = [];
     }
+
     return bitCharArr;
   }
 
   // find where the character exists within the font object
   _findCharBuf(font, c) {
     // use the lookup array as a ref to find where the current char bytes start
-    var cBufPos = font.lookup.indexOf(c) * font.width;
+    const cBufPos = font.lookup.indexOf(c) * font.width;
     // slice just the current char's bytes out of the fontData array and return
-    var cBuf = font.fontData.slice(cBufPos, cBufPos + font.width);
+    const cBuf = font.fontData.slice(cBufPos, cBufPos + font.width);
+
     return cBuf;
   }
 
   // send the entire framebuffer to the oled
   async update(startPage = 0, endPage = MAX_PAGE_COUNT) {
-    console.log('update', {startPage, endPage});
-
     // wait for oled to be ready
     await this._waitUntilReady();
 
     for(let index = startPage; index < endPage; index++) {
-      var displaySeq = [
+      const displaySeq = [
         SET_PAGE_ADDRESS + index,
         0x00, // low column start address
         0x10, // high column start address
       ];
 
-      var displaySeqLen = displaySeq.length,
-          bufferLen = this.buffer.length,
-          i, v;
-
       // send intro seq
-      for(i = 0; i < displaySeqLen; i += 1) {
-        await this._transfer('cmd', displaySeq[i]);
-      }
+      await this._transferCmd(displaySeq);
 
       // write buffer data
-      const start = index * this.WIDTH;
-      const end   = start + this.WIDTH;
+      const start = index * WIDTH;
+      const end   = start + WIDTH;
       const slice = this.buffer.slice(start, end);
 
-      console.log('update', {index});
-      await this._transferData([0x00, 0x00]); // it seems like there are two pixels per page, not shown
+      await this._transferData([0x00, 0x00]); // there are two pixels per page, not shown
       await this._transferData(slice);
     }
 
@@ -326,36 +316,36 @@ class Oled {
 
   // send dim display command to oled
   async dimDisplay(bool) {
-    var contrast;
+    let contrast;
 
-    if (bool) {
+    if(bool) {
       contrast = 0; // Dimmed display
     } else {
       contrast = 0xCF; // Bright display
     }
 
-    await this._transfer('cmd', this.SET_CONTRAST);
-    await this._transfer('cmd', contrast);
+    await this._transferCmd(this.SET_CONTRAST);
+    await this._transferCmd(contrast);
   }
 
   // turn oled off
   async turnOffDisplay() {
-    await this._transfer('cmd', this.DISPLAY_OFF);
+    await this._transferCmd(this.DISPLAY_OFF);
   }
 
   // turn oled on
   async turnOnDisplay() {
-    await this._transfer('cmd', this.DISPLAY_ON);
+    await this._transferCmd(this.DISPLAY_ON);
   }
 
   // clear all pixels currently on the display
   async clearDisplay(sync = true) {
     // write off pixels
-    //this.buffer.fill(0x00);
-    for (var i = 0; i < this.buffer.length; i += 1) {
-      if (this.buffer[i] !== 0x00) {
+    // this.buffer.fill(0x00);
+    for(let i = 0; i < this.buffer.length; i += 1) {
+      if(this.buffer[i] !== 0x00) {
         this.buffer[i] = 0x00;
-        if (this.dirtyBytes.indexOf(i) === -1) {
+        if(this.dirtyBytes.indexOf(i) === -1) {
           this.dirtyBytes.push(i);
         }
       }
@@ -367,21 +357,21 @@ class Oled {
 
   // invert pixels on oled
   async invertDisplay(bool) {
-    if (bool) {
-      await this._transfer('cmd', this.INVERT_DISPLAY); // inverted
+    if(bool) {
+      await this._transferCmd(this.INVERT_DISPLAY); // inverted
     } else {
-      await this._transfer('cmd', this.NORMAL_DISPLAY); // non inverted
+      await this._transferCmd(this.NORMAL_DISPLAY); // non inverted
     }
   }
 
   // draw an image pixel array on the screen
   async drawBitmap(pixels, sync = true) {
-    var x, y,
-        pixelArray = [];
+    let   x;
+    let   y;
 
-    for (var i = 0; i < pixels.length; i++) {
-      x = Math.floor(i % this.WIDTH);
-      y = Math.floor(i / this.WIDTH);
+    for(let i = 0; i < pixels.length; i++) {
+      x = Math.floor(i % WIDTH);
+      y = Math.floor(i / WIDTH);
 
       this.drawPixel([x, y, pixels[i]], false);
     }
@@ -394,36 +384,46 @@ class Oled {
   // draw one or many pixels on oled
   async drawPixel(pixels, sync = true) {
     // handle lazy single pixel case
-    if (typeof pixels[0] !== 'object') pixels = [pixels];
+    if(typeof pixels[0] !== 'object') {
+      pixels = [pixels];
+    }
 
     pixels.forEach(function(el) {
       // return if the pixel is out of range
-      var x = el[0], y = el[1], color = el[2];
-      if (x > this.WIDTH || y > this.HEIGHT) return;
+      const x = el[0];
+      const y = el[1];
+      const color = el[2];
+
+      if(x > WIDTH || y > HEIGHT) {
+        return;
+      }
 
       // thanks, Martin Richards.
       // I wanna can this, this tool is for devs who get 0 indexes
-      //x -= 1; y -=1;
-      var byte = 0,
-          page = Math.floor(y / 8),
-          pageShift = 0x01 << (y - 8 * page);
+      // x -= 1; y -=1;
+      let   byte = 0;
+      const page = Math.floor(y / 8);
+      const pageShift = 0x01 << (y - 8 * page);
 
       // is the pixel on the first row of the page?
-      (page == 0) ? byte = x : byte = x + (this.WIDTH * page);
+      if(page === 0) {
+        byte = x;
+      } else {
+        byte = x + (WIDTH * page);
+      }
 
       // colors! Well, monochrome.
-      if (color === 'BLACK' || color === 0) {
+      if(color === 'BLACK' || color === 0) {
         this.buffer[byte] &= ~pageShift;
       }
-      if (color === 'WHITE' || color > 0) {
+      if(color === 'WHITE' || color > 0) {
         this.buffer[byte] |= pageShift;
       }
 
       // push byte to dirty if not already there
-      if (this.dirtyBytes.indexOf(byte) === -1) {
+      if(this.dirtyBytes.indexOf(byte) === -1) {
         this.dirtyBytes.push(byte);
       }
-
     }, this);
 
     if(sync) {
@@ -433,28 +433,39 @@ class Oled {
 
   // looks at dirty bytes, and sends the updated bytes to the display
   async _updateDirtyBytes(byteArray) {
-    console.log('updateDirtyBytes', this.dirtyBytes);
+//    console.log('updateDirtyBytes', this.dirtyBytes);
 
-    var blen = byteArray.length, i,
-        displaySeq = [];
+    const blen = byteArray.length;
 
     await this._waitUntilReady();
 
-    var pageStart = Infinity, pageEnd = 0;
-    var any = false;
+    let   pageStart = Infinity;
+    let   pageEnd = 0;
+    let   any = false;
 
     // iterate through dirty bytes
-    for (var i = 0; i < blen; i += 1) {
-      var b = byteArray[i];
-      if ((b >= 0) && (b < this.buffer.length)) {
-        var page = b / this.WIDTH | 0;
-        if (page < pageStart) pageStart = page;
-        if (page > pageEnd) pageEnd = page;
+    for(let i = 0; i < blen; i += 1) {
+      const b = byteArray[i];
+
+      if(b >= 0 && b < this.buffer.length) {
+        const page = b / WIDTH | 0;
+
+        if(page < pageStart) {
+          pageStart = page;
+        }
+        if(page > pageEnd) {
+          pageEnd = page;
+        }
         any = true;
       }
     }
 
-    if (!any) return;
+    // TODO ?? I could re-add the logic to calculate the number of bytes per row
+    // that need to be written.
+
+    if(!any) {
+      return;
+    }
 
     await this.update(pageStart, pageEnd + 1);
 
@@ -464,20 +475,32 @@ class Oled {
 
   // using Bresenham's line algorithm
   async drawLine(x0, y0, x1, y1, color, sync = true) {
-    var dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1,
-        dy = Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1,
-        err = (dx > dy ? dx : -dy) / 2;
+    const dx = Math.abs(x1 - x0);
+    const sx = x0 < x1 ? 1 : -1;
+    const dy = Math.abs(y1 - y0);
+    const sy = y0 < y1 ? 1 : -1;
+    let   err = (dx > dy ? dx : -dy) / 2;
 
-    while (true) {
+    /* eslint-disable no-constant-condition */
+    while(true) {
       this.drawPixel([x0, y0, color], false);
 
-      if (x0 === x1 && y0 === y1) break;
+      if(x0 === x1 && y0 === y1) {
+        break;
+      }
 
-      var e2 = err;
+      const e2 = err;
 
-      if (e2 > -dx) {err -= dy; x0 += sx;}
-      if (e2 < dy) {err += dx; y0 += sy;}
+      if(e2 > -dx) {
+        err -= dy;
+        x0 += sx;
+      }
+      if(e2 < dy) {
+        err += dx;
+        y0 += sy;
+      }
     }
+    /* eslint-enable no-constant-condition */
 
     if(sync) {
       await this._updateDirtyBytes(this.dirtyBytes);
@@ -486,16 +509,16 @@ class Oled {
 
   // Draw an outlined  rectangle
   async drawRect(x, y, w, h, color, sync = true) {
-    //top
-    this.drawLine(x, y, x + w, y,color,false);
+    // top
+    this.drawLine(x, y, x + w, y, color, false);
 
-    //left
+    // left
     this.drawLine(x, y + 1, x, y + h - 1, color, false);
 
-    //right
+    // right
     this.drawLine(x + w, y + 1, x + w, y + h - 1, color, false);
 
-    //bottom
+    // bottom
     this.drawLine(x, y + h - 1, x + w, y + h - 1, color, false);
 
     if(sync) {
@@ -506,9 +529,9 @@ class Oled {
   // draw a filled rectangle on the oled
   async fillRect(x, y, w, h, color, sync = true) {
     // one iteration for each column of the rectangle
-    for (var i = x; i < x + w; i += 1) {
+    for(let i = x; i < x + w; i += 1) {
       // draws a vert line
-      this.drawLine(i, y, i, y+h-1, color, false);
+      this.drawLine(i, y, i, y + h - 1, color, false);
     }
     if(sync) {
       await this._updateDirtyBytes(this.dirtyBytes);
@@ -523,11 +546,11 @@ class Oled {
    * https://github.com/adafruit/Adafruit-GFX-Library
    */
   async drawCircle(x0, y0, r, color, sync = true) {
-    var f = 1 - r;
-    var ddF_x = 1;
-    var ddF_y = -2 * r;
-    var x = 0;
-    var y = r;
+    let   f = 1 - r;
+    let   ddFX = 1;
+    let   ddFY = -2 * r;
+    let   x = 0;
+    let   y = r;
 
     this.drawPixel(
       [[x0, y0 + r, color],
@@ -538,14 +561,14 @@ class Oled {
     );
 
     while(x < y) {
-      if (f >=0) {
+      if(f >= 0) {
         y--;
-        ddF_y += 2;
-        f += ddF_y;
+        ddFY += 2;
+        f += ddFY;
       }
       x++;
-      ddF_x += 2;
-      f += ddF_x;
+      ddFX += 2;
+      f += ddFX;
 
       this.drawPixel(
         [[x0 + x, y0 + y, color],
@@ -567,19 +590,20 @@ class Oled {
 
   // activate scrolling for rows start through stop
   async startScroll(dir, start, stop) {
-    var scrollHeader,
-        cmdSeq = [];
+    const cmdSeq = [];
 
-    switch (dir) {
+    switch(dir) {
       case 'right':
-        cmdSeq.push(this.RIGHT_HORIZONTAL_SCROLL); break;
+        cmdSeq.push(this.RIGHT_HORIZONTAL_SCROLL);
+        break;
       case 'left':
-        cmdSeq.push(this.LEFT_HORIZONTAL_SCROLL); break;
+        cmdSeq.push(this.LEFT_HORIZONTAL_SCROLL);
+        break;
       case 'left diagonal':
         cmdSeq.push(
           this.SET_VERTICAL_SCROLL_AREA,
           0x00,
-          this.HEIGHT,
+          HEIGHT,
           this.VERTICAL_AND_LEFT_HORIZONTAL_SCROLL,
           0x00,
           start,
@@ -593,7 +617,7 @@ class Oled {
         cmdSeq.push(
           this.SET_VERTICAL_SCROLL_AREA,
           0x00,
-          this.HEIGHT,
+          HEIGHT,
           this.VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL,
           0x00,
           start,
@@ -603,11 +627,13 @@ class Oled {
           this.ACTIVATE_SCROLL
         );
         break;
+      default:
+        throw new Error(`Unhandled dir ${dir}`);
     }
 
-    await _waitUntilReady();
+    await this._waitUntilReady();
 
-    if(dir === 'right' || dir === 'left'){
+    if(dir === 'right' || dir === 'left') {
       cmdSeq.push(
         0x00, start,
         0x00, stop,
@@ -616,16 +642,12 @@ class Oled {
       );
     }
 
-    var i, cmdSeqLen = cmdSeq.length;
-
-    for (i = 0; i < cmdSeqLen; i += 1) {
-      await this._transfer('cmd', cmdSeq[i]);
-    }
+    await this._transferCmd(cmdSeq);
   }
 
   // stop scrolling display contents
   async stopScroll() {
-    await this._transfer('cmd', this.DEACTIVATE_SCROLL); // stahp
+    await this._transferCmd(this.DEACTIVATE_SCROLL); // stahp
   }
 }
 

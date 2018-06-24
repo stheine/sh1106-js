@@ -2,22 +2,15 @@
 
 'use strict';
 
+/* eslint-disable no-unused-vars */
 const delay = require('delay');
-const font  = require('oled-font-5x7')
+const font  = require('oled-font-5x7');
+/* eslint-enable no-unused-vars */
 
 const Oled  = require('./oled.js');
 
-const opts = {
-  width:    128,
-  height:   64,
-  address:  0x3C,
-  device:   '/dev/i2c-1',
-  datasize: 16,
-//  microview: null,
-};
-
 (async() => {
-  const oled = new Oled(opts);
+  const oled = new Oled();
 
   await oled.initialize();
 
