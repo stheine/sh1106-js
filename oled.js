@@ -40,15 +40,12 @@ class Oled {
   constructor(opts) {
     opts = opts || {};
 
-    this.ADDRESS = opts.address || 0x3C;
-    this.DEVICE  = opts.device  || '/dev/i2c-1';
-
     // new blank buffer
     this.buffer     = Buffer.alloc((WIDTH * HEIGHT) / 8, 0x00);
     this.dirtyBytes = [];
 
     // setup i2c
-    this.wire = new I2c(this.ADDRESS, {device: this.DEVICE});
+    this.wire = new I2c(opts.address || 0x3C, {device: opts.device  || '/dev/i2c-1'});
 
     // Cursor position for text
     this.cursorX = 0;
@@ -132,9 +129,9 @@ class Oled {
     // TODO
     // not sure if this might still be required,
     // or if has been obsoleted by async/await handling in wire.writeBytes!?
+    return;
 
-    /* eslint-disable multiline-comment-style */
-    /*
+    /* eslint-disable no-unreachable */
     return new Promise(resolve => {
       const tick = () => {
         this._readI2C(byte => {
@@ -151,8 +148,8 @@ class Oled {
       };
 
       process.nextTick(tick);
-    }); */
-    /* eslint-enable multiline-comment-style */
+    });
+    /* eslint-enable no-unreachable */
   }
 
   // set starting position of a text string on the oled
@@ -315,27 +312,27 @@ class Oled {
   }
 
   // send dim display command to oled
-  async dimDisplay(bool) {
+  async dimDisplay(dim) {
     let contrast;
 
-    if(bool) {
+    if(dim) {
       contrast = 0; // Dimmed display
     } else {
-      contrast = 0xCF; // Bright display
+      contrast = 0xff; // Bright display
     }
 
-    await this._transferCmd(this.SET_CONTRAST);
+    await this._transferCmd(SET_CONTRAST_CTRL_MODE);
     await this._transferCmd(contrast);
   }
 
   // turn oled off
   async turnOffDisplay() {
-    await this._transferCmd(this.DISPLAY_OFF);
+    await this._transferCmd(DISPLAY_OFF);
   }
 
   // turn oled on
   async turnOnDisplay() {
-    await this._transferCmd(this.DISPLAY_ON);
+    await this._transferCmd(DISPLAY_ON);
   }
 
   // clear all pixels currently on the display
@@ -358,9 +355,9 @@ class Oled {
   // invert pixels on oled
   async invertDisplay(bool) {
     if(bool) {
-      await this._transferCmd(this.INVERT_DISPLAY); // inverted
+      await this._transferCmd(SET_REVERSE_DISPLAY); // inverted
     } else {
-      await this._transferCmd(this.NORMAL_DISPLAY); // non inverted
+      await this._transferCmd(SET_NORMAL_DISPLAY); // non inverted
     }
   }
 
@@ -590,41 +587,51 @@ class Oled {
 
   // activate scrolling for rows start through stop
   async startScroll(dir, start, stop) {
+    throw new Error('Scrolling not implemented on SH1106');
+
+    /* eslint-disable no-unreachable */
+    const RIGHT_HORIZONTAL_SCROLL = null;
+    const LEFT_HORIZONTAL_SCROLL = null;
+    const SET_VERTICAL_SCROLL_AREA = null;
+    const VERTICAL_AND_LEFT_HORIZONTAL_SCROLL = null;
+    const ACTIVATE_SCROLL = null;
+    const VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL = null;
+
     const cmdSeq = [];
 
     switch(dir) {
       case 'right':
-        cmdSeq.push(this.RIGHT_HORIZONTAL_SCROLL);
+        cmdSeq.push(RIGHT_HORIZONTAL_SCROLL);
         break;
       case 'left':
-        cmdSeq.push(this.LEFT_HORIZONTAL_SCROLL);
+        cmdSeq.push(LEFT_HORIZONTAL_SCROLL);
         break;
       case 'left diagonal':
         cmdSeq.push(
-          this.SET_VERTICAL_SCROLL_AREA,
+          SET_VERTICAL_SCROLL_AREA,
           0x00,
           HEIGHT,
-          this.VERTICAL_AND_LEFT_HORIZONTAL_SCROLL,
+          VERTICAL_AND_LEFT_HORIZONTAL_SCROLL,
           0x00,
           start,
           0x00,
           stop,
           0x01,
-          this.ACTIVATE_SCROLL
+          ACTIVATE_SCROLL
         );
         break;
       case 'right diagonal':
         cmdSeq.push(
-          this.SET_VERTICAL_SCROLL_AREA,
+          SET_VERTICAL_SCROLL_AREA,
           0x00,
           HEIGHT,
-          this.VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL,
+          VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL,
           0x00,
           start,
           0x00,
           stop,
           0x01,
-          this.ACTIVATE_SCROLL
+          ACTIVATE_SCROLL
         );
         break;
       default:
@@ -638,16 +645,23 @@ class Oled {
         0x00, start,
         0x00, stop,
         0x00, 0xFF,
-        this.ACTIVATE_SCROLL
+        ACTIVATE_SCROLL
       );
     }
 
     await this._transferCmd(cmdSeq);
+    /* eslint-enable no-unreachable */
   }
 
   // stop scrolling display contents
   async stopScroll() {
-    await this._transferCmd(this.DEACTIVATE_SCROLL); // stahp
+    throw new Error('Scrolling not implemented on SH1106');
+
+    /* eslint-disable no-unreachable */
+    const DEACTIVATE_SCROLL = null;
+
+    await this._transferCmd(DEACTIVATE_SCROLL); // stahp
+    /* eslint-enable no-unreachable */
   }
 }
 
