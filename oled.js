@@ -14,28 +14,26 @@ const WIDTH          = 128;
 const DATA_SIZE      = 16;
 const MAX_PAGE_COUNT = 8;
 
-const SET_PAGE_ADDRESS              = 0xB0; /* sets the page address from 0 to 7 */
+const SET_DISPLAY_START_LINE        = 0x40;
 const DISPLAY_OFF                   = 0xAE;
 const DISPLAY_ON                    = 0xAF;
-const SET_MEMORY_ADDRESSING_MODE    = 0x20;
-const SET_COM_OUTPUT_SCAN_DIRECTION = 0xC8;
-const LOW_COLUMN_ADDRESS            = 0x00;
-const HIGH_COLUMN_ADDRESS           = 0x10;
-const START_LINE_ADDRESS            = 0x40;
-const SET_CONTRAST_CTRL_REG         = 0x81;
-const SET_SEGMENT_REMAP             = 0xA1;
-const SET_NORMAL_DISPLAY            = 0xA6;
-const SET_REVERSE_DISPLAY           = 0xA7;
+const SET_ENTIRE_DISPLAY_OFF        = 0xA4;
+const SET_ENTIRE_DISPLAY_ON         = 0xA5;
 const SET_MULTIPLEX_RATIO           = 0xA8;
-const OUTPUT_FOLLOWS_RAM            = 0xA4;
-const OUTPUT_IGNORES_RAM            = 0xA5;
-
 const SET_DISPLAY_OFFSET            = 0xD3;
 const SET_DISPLAY_CLOCK_DIVIDE      = 0xD5;
+const SET_DC_DC_CONTROL_MODE        = 0xAD;
+const SET_DC_DC_ENABLE              = 0x8B;
 const SET_PRE_CHARGE_PERIOD         = 0xD9;
-const SET_COM_PINS_HARDWARE_CONFIG  = 0xDA;
 const SET_VCOMH                     = 0xDB;
-const SET_DC_DC_ENABLE              = 0x8D;
+const SET_PUMP_VOLTAGE              = 0x32;
+const SET_CONTRAST_CTRL_MODE        = 0x81;
+const SET_NORMAL_DISPLAY            = 0xA6;
+const SET_REVERSE_DISPLAY           = 0xA7;
+const SET_COMMON_PADS_HARDWARE_MODE = 0xDA;
+const SET_SEGMENT_REMAP             = 0xA1;
+const SET_COMMON_OUTPUT_SCAN_DIRECTION = 0xC8;
+const SET_PAGE_ADDRESS              = 0xB0; /* sets the page address from 0 to 7 */
 /* eslint-enable no-unused-vars */
 
 class Oled {
@@ -61,23 +59,21 @@ class Oled {
     // sequence of bytes to initialize with
     const initSeq = [
       DISPLAY_OFF,
-      SET_MEMORY_ADDRESSING_MODE, 0x02, // 0x00 horizontal, 0x01 vertical, 0x02 page
-      SET_PAGE_ADDRESS, // start at page address 0
-      SET_COM_OUTPUT_SCAN_DIRECTION,
-      LOW_COLUMN_ADDRESS,
-      HIGH_COLUMN_ADDRESS,
-      START_LINE_ADDRESS,
-      SET_CONTRAST_CTRL_REG, 0x7F,
-      SET_SEGMENT_REMAP,
-      SET_NORMAL_DISPLAY,
+      SET_ENTIRE_DISPLAY_OFF,
+      SET_DISPLAY_CLOCK_DIVIDE, 0x50,
       SET_MULTIPLEX_RATIO, 0x3F,
-      OUTPUT_FOLLOWS_RAM,
-      SET_DISPLAY_OFFSET, 0x00,  // no offset
-      SET_DISPLAY_CLOCK_DIVIDE, 0xF0,
+      SET_DISPLAY_OFFSET, 0x00,
+      SET_DISPLAY_START_LINE,
+      SET_DC_DC_CONTROL_MODE,
+      SET_DC_DC_ENABLE,
       SET_PRE_CHARGE_PERIOD, 0x22,
-      SET_COM_PINS_HARDWARE_CONFIG, 0x12,
-      SET_VCOMH, 0x20, // 0.77xVcc
-      SET_DC_DC_ENABLE, 0x14,
+      SET_VCOMH, 0x35,
+      SET_PUMP_VOLTAGE,
+      SET_CONTRAST_CTRL_MODE, 0x7F,
+      SET_NORMAL_DISPLAY,
+      SET_COMMON_PADS_HARDWARE_MODE, 0x12,
+      SET_SEGMENT_REMAP,
+      SET_COMMON_OUTPUT_SCAN_DIRECTION,
       DISPLAY_ON,
     ];
 
