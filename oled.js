@@ -280,10 +280,11 @@ class Oled {
 
   // find where the character exists within the font object
   _findCharBuf(font, c) {
+    const charLength = Math.ceil((font.width * font.height) / 8);
     // use the lookup array as a ref to find where the current char bytes start
-    const cBufPos = font.lookup.indexOf(c) * font.width;
+    const cBufPos = font.lookup.indexOf(c) * charLength;
     // slice just the current char's bytes out of the fontData array and return
-    const cBuf = font.fontData.slice(cBufPos, cBufPos + font.width);
+    const cBuf = font.fontData.slice(cBufPos, cBufPos + charLength);
 
     return cBuf;
   }
