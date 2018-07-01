@@ -4,7 +4,6 @@
 /* eslint-disable no-bitwise */
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable class-methods-use-this */
-/* eslint-disable no-console */ // TODO
 
 const I2c = require('i2c');
 
@@ -41,7 +40,8 @@ class Oled {
     opts = opts || {};
 
     // new blank buffer
-    this.buffer     = Buffer.alloc((WIDTH * HEIGHT) / 8, 0x00);
+    // init with 0xff to make sure that the inital clearDisplay() call will update all pixels.
+    this.buffer     = Buffer.alloc((WIDTH * HEIGHT) / 8, 0xff);
     this.dirtyBytes = [];
 
     // setup i2c
@@ -75,7 +75,8 @@ class Oled {
     ];
 
     // write init seq commands
-    this._transferCmd(initSeq);
+    await this._transferCmd(initSeq);
+    await this.clearDisplay(true);
   }
 
   async _transferCmd(cmds) {
@@ -191,7 +192,7 @@ class Oled {
         const charBytes = this._readCharBytes(charBuf);
 
         // draw the entire character
-        this._drawChar(font, charBytes, size, false);
+        this._drawChar(font, charBytes, size, color);
 
         // calc new x position for the next char, add a touch of padding too if it's a non space char
         padding = stringArr[i] === ' ' ? 0 : size + letspace;
@@ -213,7 +214,7 @@ class Oled {
   }
 
   // draw an individual character to the screen
-  _drawChar(font, byteArray, size) {
+  _drawChar(font, byteArray, size, color) {
     // take your positions...
     const x = this.cursorX;
     const y = this.cursorY;
@@ -226,20 +227,24 @@ class Oled {
       pagePos = Math.floor(i / font.width) * 8;
       for(let j = 0; j < 8; j += 1) {
         // pull color out
-        const color = byteArray[i][j];
-        let   xpos;
-        let   ypos;
+        let setColor = byteArray[i][j];
+        let xpos;
+        let ypos;
+
+        if(color === 'BLACK' || !color) {
+          setColor = !setColor;
+        }
 
         // standard font size
         if(size === 1) {
           xpos = x + c;
           ypos = y + j + pagePos;
-          this.drawPixel([xpos, ypos, color], false);
+          this.drawPixel([xpos, ypos, setColor], false);
         } else {
           // MATH! Calculating pixel size multiplier to primitively scale the font
           xpos = x + (i * size);
           ypos = y + (j * size);
-          this.fillRect(xpos, ypos, size, size, color, false);
+          this.fillRect(xpos, ypos, size, size, setColor, false);
         }
       }
       c = c < font.width - 1 ? c += 1 : 0;
@@ -312,17 +317,16 @@ class Oled {
   }
 
   // send dim display command to oled
-  async dimDisplay(dim) {
-    let contrast;
-
-    if(dim) {
-      contrast = 0; // Dimmed display
-    } else {
-      contrast = 0xff; // Bright display
+  async dimDisplay(contrast) {
+    if(typeof dim === 'boolean') {
+      if(contrast) {
+        contrast = 0x00; // Dimmed display
+      } else {
+        contrast = 0xff; // Bright display
+      }
     }
 
-    await this._transferCmd(SET_CONTRAST_CTRL_MODE);
-    await this._transferCmd(contrast);
+    await this._transferCmd([SET_CONTRAST_CTRL_MODE, contrast]);
   }
 
   // turn oled off
@@ -410,10 +414,10 @@ class Oled {
       }
 
       // colors! Well, monochrome.
-      if(color === 'BLACK' || color === 0) {
+      if(color === 'BLACK' || !color) {
         this.buffer[byte] &= ~pageShift;
       }
-      if(color === 'WHITE' || color > 0) {
+      if(color === 'WHITE' || color) {
         this.buffer[byte] |= pageShift;
       }
 
@@ -430,8 +434,6 @@ class Oled {
 
   // looks at dirty bytes, and sends the updated bytes to the display
   async _updateDirtyBytes(byteArray) {
-//    console.log('updateDirtyBytes', this.dirtyBytes);
-
     const blen = byteArray.length;
 
     await this._waitUntilReady();
