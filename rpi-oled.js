@@ -5,12 +5,14 @@
 /* eslint-disable no-unused-vars */
 const delay = require('delay');
 const font  = require('oled-font-5x7');
+const rpio  = require('rpio');
 /* eslint-enable no-unused-vars */
 
 const Oled  = require('./oled.js');
 
 (async() => {
-  const oled = new Oled();
+  rpio.init({gpiomem: false});
+  const oled = new Oled({rpio});
 
   await oled.initialize();
 
@@ -68,7 +70,8 @@ const Oled  = require('./oled.js');
 //    await delay(50);
   }
 
-//  setTimeout(async() => {
-//    await oled.turnOffDisplay();
-//  }, 1000);
+  setTimeout(async() => {
+    await oled.turnOffDisplay();
+    rpio.i2cEnd();
+  }, 1000);
 })();

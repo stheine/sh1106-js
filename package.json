@@ -27,18 +27,18 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=8.0.0 <9"
+    "node": ">=8.0.0"
   },
   "dependencies": {
     "delay": "^3.0.0",
-    "i2c": "^0.2.3",
     "oled-font-5x7": "^1.0.0"
   },
   "devDependencies": {
-    "eslint": "^5.0.0",
+    "eslint": "^5.2.0",
     "eslint-config-es": "^0.9.1",
     "eslint-plugin-json": "^1.2.0",
     "png-to-lcd": "^1.0.3",
+    "rpio": "^0.9.22",
     "temporal": "^0.6.0"
   }
 }

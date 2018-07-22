@@ -5,8 +5,6 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable class-methods-use-this */
 
-const I2c = require('i2c');
-
 /* eslint-disable no-unused-vars */
 const HEIGHT         = 64;
 const WIDTH          = 128;
@@ -45,7 +43,12 @@ class Oled {
     this.dirtyBytes = [];
 
     // setup i2c
-    this.wire = new I2c(opts.address || 0x3C, {device: opts.device  || '/dev/i2c-1'});
+//    this.wire = new I2c(opts.address || 0x3C, {device: opts.device  || '/dev/i2c-1'});
+    this.rpio = opts.rpio;
+
+    this.rpio.i2cBegin();
+    this.rpio.i2cSetSlaveAddress(opts.address || 0x3C);
+    this.rpio.i2cSetBaudRate(1000000);
 
     // Cursor position for text
     this.cursorX = 0;
@@ -85,72 +88,59 @@ class Oled {
     }
 
     cmds.map(async cmd => {
-      await new Promise((resolve, reject) => {
-        this.wire.writeBytes(0x00, [cmd], err => {
-          if(err) {
-            return reject();
-          }
-
-          resolve();
-        });
-      });
+      this.rpio.i2cWrite(Buffer.from([0x00, cmd]));
     });
   }
 
   async _transferData(data) {
     for(let i = 0; i < data.length; i += DATA_SIZE) {
-      const smallarray = data.slice(i, i + DATA_SIZE);
+      const slice = data.slice(i, i + DATA_SIZE);
+      const transfer = Buffer.allocUnsafe(slice.length + 1);
 
-      await new Promise((resolve, reject) => {
-        this.wire.writeBytes(0x40, smallarray, err => {
-          if(err) {
-            return reject();
-          }
-
-          resolve();
-        });
-      });
+      transfer[0] = 0x40;
+      slice.copy(transfer, 1);
+      this.rpio.i2cWrite(transfer);
     }
   }
 
-  // read a byte from the oled
-  _readI2C(fn) {
-    this.wire.readByte((err, data) => {
-      if(err) {
-        throw err;
-      }
-
-      fn(data);
-    });
-  }
+//  // read a byte from the oled
+//  _readI2C(fn) {
+//    this.wire.readByte((err, data) => {
+//      if(err) {
+//        throw err;
+//      }
+//
+//      fn(data);
+//    });
+//  }
 
   // sometimes the oled gets a bit busy with lots of bytes.
   // Read the response byte to see if this is the case
   _waitUntilReady() {
-    // TODO
-    // not sure if this might still be required,
-    // or if has been obsoleted by async/await handling in wire.writeBytes!?
-    return;
-
-    /* eslint-disable no-unreachable */
-    return new Promise(resolve => {
-      const tick = () => {
-        this._readI2C(byte => {
-          // read the busy byte in the response
-          const busy = byte >> 7 & 1;
-
-          if(busy) {
-            process.nextTick(tick);
-          } else {
-            // if not busy, it's ready for callback
-            return resolve();
-          }
-        });
-      };
-
-      process.nextTick(tick);
-    });
-    /* eslint-enable no-unreachable */
+//    // TODO
+//    // not sure if this might still be required,
+//    // or if has been obsoleted by async/await handling in wire.writeBytes!?
+//    return;
+//
+//    /* eslint-disable no-unreachable */
+//    return new Promise(resolve => {
+//      const tick = () => {
+//        this._readI2C(byte => {
+//          // read the busy byte in the response
+//          const busy = byte >> 7 & 1;
+//
+//          if(busy) {
+//            process.nextTick(tick);
+//          } else {
+//            // if not busy, it's ready for callback
+//            return resolve();
+//          }
+//        });
+//      };
+//
+//      process.nextTick(tick);
+//    });
+//    /* eslint-enable no-unreachable */
   }
 
   // set starting position of a text string on the oled
@@ -309,7 +299,7 @@ class Oled {
       const end   = start + WIDTH;
       const slice = this.buffer.slice(start, end);
 
-      await this._transferData([0x00, 0x00]); // there are two pixels per page, not shown
+      await this._transferData(Buffer.from([0x00, 0x00])); // there are two pixels per page, not shown
       await this._transferData(slice);
     }
 
