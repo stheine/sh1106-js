@@ -42,8 +42,11 @@ class Oled {
     this.buffer     = Buffer.alloc((WIDTH * HEIGHT) / 8, 0xff);
     this.dirtyBytes = [];
 
+    if(!opts.rpio) {
+      throw new Error('new Oled(): rpio missing');
+    }
+
     // setup i2c
-//    this.wire = new I2c(opts.address || 0x3C, {device: opts.device  || '/dev/i2c-1'});
     this.rpio = opts.rpio;
 
     this.rpio.i2cBegin();
