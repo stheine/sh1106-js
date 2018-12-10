@@ -1,7 +1,7 @@
 'use strict';
 
 const pngtolcd = require('png-to-lcd');
-const Oled = require('../oled');
+const Oled = require('../');
 const font = require('oled-font-5x7');
 const temporal = require('temporal');
 

@@ -2,9 +2,9 @@
   "name": "sh1106-js",
   "version": "0.0.0",
   "description": "NodeJS library for controlling SH1106 I2C OLED screens on the Raspbery Pi",
-  "main": "oled.js",
+  "main": "Oled.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "sudo `which node` node_modules/.bin/mocha --ui tdd --watch tests"
   },
   "repository": {
     "type": "git",
@@ -27,18 +27,20 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=8.0.0"
+    "node": ">=10.0.0"
   },
   "dependencies": {
-    "delay": "^3.0.0",
-    "oled-font-5x7": "^1.0.0"
+    "delay": "4.1.0",
+    "oled-font-5x7": "1.0.3"
   },
   "devDependencies": {
-    "eslint": "^5.2.0",
-    "eslint-config-es": "^0.9.1",
-    "eslint-plugin-json": "^1.2.0",
-    "png-to-lcd": "^1.0.3",
-    "rpio": "^0.9.22",
-    "temporal": "^0.6.0"
+    "assertthat": "^2.0.0",
+    "eslint": "5.10.0",
+    "eslint-config-es": "0.9.1",
+    "eslint-plugin-json": "1.3.2",
+    "mocha": "5.2.0",
+    "png-to-lcd": "1.0.3",
+    "rpio": "1.0.11",
+    "temporal": "0.7.1"
   }
 }

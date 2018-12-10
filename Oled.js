@@ -283,11 +283,11 @@ class Oled {
   }
 
   // send the entire framebuffer to the oled
-  async update(startPage = 0, endPage = MAX_PAGE_COUNT) {
+  async update(startPage = 0, endPage = MAX_PAGE_COUNT - 1) {
     // wait for oled to be ready
     await this._waitUntilReady();
 
-    for(let index = startPage; index < endPage; index++) {
+    for(let index = startPage; index <= endPage; index++) {
       const displaySeq = [
         SET_PAGE_ADDRESS + index,
         0x00, // low column start address
@@ -410,8 +410,7 @@ class Oled {
       // colors! Well, monochrome.
       if(color === 'BLACK' || !color) {
         this.buffer[byte] &= ~pageShift;
-      }
-      if(color === 'WHITE' || color) {
+      } else if(color === 'WHITE' || color) {
         this.buffer[byte] |= pageShift;
       }
 
@@ -460,7 +459,7 @@ class Oled {
       return;
     }
 
-    await this.update(pageStart, pageEnd + 1);
+    await this.update(pageStart, pageEnd);
 
     // now that all bytes are synced, reset dirty state
     this.dirtyBytes = [];
@@ -502,17 +501,20 @@ class Oled {
 
   // Draw an outlined  rectangle
   async drawRect(x, y, w, h, color, sync = true) {
+    const x2 = x + w - 1;
+    const y2 = y + h - 1;
+
     // top
-    this.drawLine(x, y, x + w, y, color, false);
+    this.drawLine(x,  y, x2,  y, color, false);
 
     // left
-    this.drawLine(x, y + 1, x, y + h - 1, color, false);
+    this.drawLine(x,  y,  x, y2, color, false);
 
     // right
-    this.drawLine(x + w, y + 1, x + w, y + h - 1, color, false);
+    this.drawLine(x2, y, x2, y2, color, false);
 
     // bottom
-    this.drawLine(x, y + h - 1, x + w, y + h - 1, color, false);
+    this.drawLine(x, y2, x2, y2, color, false);
 
     if(sync) {
       await this._updateDirtyBytes(this.dirtyBytes);
@@ -521,10 +523,13 @@ class Oled {
 
   // draw a filled rectangle on the oled
   async fillRect(x, y, w, h, color, sync = true) {
+    const x2 = x + w - 1;
+    const y2 = y + h - 1;
+
     // one iteration for each column of the rectangle
-    for(let i = x; i < x + w; i += 1) {
+    for(let i = x; i <= x2; i++) {
       // draws a vert line
-      this.drawLine(i, y, i, y + h - 1, color, false);
+      this.drawLine(i, y, i, y2, color, false);
     }
     if(sync) {
       await this._updateDirtyBytes(this.dirtyBytes);

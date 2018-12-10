@@ -8,7 +8,7 @@ const font  = require('oled-font-5x7');
 const rpio  = require('rpio');
 /* eslint-enable no-unused-vars */
 
-const Oled  = require('./oled.js');
+const Oled  = require('./Oled.js');
 
 (async() => {
   rpio.init({gpiomem: false});
