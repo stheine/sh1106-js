@@ -466,15 +466,27 @@ class Oled {
   }
 
   // using Bresenham's line algorithm
-  async drawLine(x0, y0, x1, y1, color, sync = true) {
+  async drawDashedLine(x0, y0, x1, y1, initialColor, interval, sync = true) {
     const dx = Math.abs(x1 - x0);
     const sx = x0 < x1 ? 1 : -1;
     const dy = Math.abs(y1 - y0);
     const sy = y0 < y1 ? 1 : -1;
     let   err = (dx > dy ? dx : -dy) / 2;
+    let   color      = initialColor;
+    let   colorCount = 0;
 
     /* eslint-disable no-constant-condition */
     while(true) {
+      colorCount++;
+      if(colorCount === interval) {
+        if(color === 'BLACK') {
+          color = 'WHITE';
+        } else {
+          color = 'BLACK';
+        }
+        colorCount = 0;
+      }
+
       this.drawPixel([x0, y0, color], false);
 
       if(x0 === x1 && y0 === y1) {
@@ -499,41 +511,66 @@ class Oled {
     }
   }
 
+  async drawLine(x0, y0, x1, y1, color, sync = true) {
+    await this.drawDashedLine(x0, y0, x1, y1, color, 0, sync);
+  }
+
   // Draw an outlined  rectangle
-  async drawRect(x, y, w, h, color, sync = true) {
+  async drawDashedRect(x, y, w, h, color, interval, sync = true) {
     const x2 = x + w - 1;
     const y2 = y + h - 1;
 
     // top
-    this.drawLine(x,  y, x2,  y, color, false);
+    this.drawDashedLine(x,  y, x2,  y, color, interval, false);
 
     // left
-    this.drawLine(x,  y,  x, y2, color, false);
+    this.drawDashedLine(x,  y,  x, y2, color, interval, false);
 
     // right
-    this.drawLine(x2, y, x2, y2, color, false);
+    this.drawDashedLine(x2, y, x2, y2, color, interval, false);
 
     // bottom
-    this.drawLine(x, y2, x2, y2, color, false);
+    this.drawDashedLine(x, y2, x2, y2, color, interval, false);
 
     if(sync) {
       await this._updateDirtyBytes(this.dirtyBytes);
     }
   }
 
+  async drawRect(x, y, w, h, color, sync = true) {
+    await this.drawDashedRect(x, y, w, h, color, 0, sync);
+  }
+
   // draw a filled rectangle on the oled
-  async fillRect(x, y, w, h, color, sync = true) {
+  async fillDashedRect(x, y, w, h, initialColor, interval, sync = true) {
     const x2 = x + w - 1;
     const y2 = y + h - 1;
+    let   color      = initialColor;
+    let   colorCount = 0;
 
     // one iteration for each column of the rectangle
     for(let i = x; i <= x2; i++) {
+      colorCount++;
+      if(colorCount === interval) {
+        if(color === 'BLACK') {
+          color = 'WHITE';
+        } else {
+          color = 'BLACK';
+        }
+        colorCount = 0;
+      }
+
       // draws a vert line
-      this.drawLine(i, y, i, y2, color, false);
+      this.drawDashedLine(i, y, i, y2, color, interval, false);
     }
+
     if(sync) {
       await this._updateDirtyBytes(this.dirtyBytes);
     }
+  }
+
+  async fillRect(x, y, w, h, color, sync = true) {
+    await this.fillDashedRect(x, y, w, h, color, 0, sync);
   }
 
   /**

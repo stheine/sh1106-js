@@ -48,11 +48,28 @@ suite('Oled', () => {
       ], true);
     });
 
+    test.skip('drawDashedLine', async() => {
+      await oled.drawDashedLine(10,   0, 127,  0, 'WHITE', 1, true);
+      await oled.drawDashedLine(127, 10, 127, 63, 'WHITE', 2, true);
+      await oled.drawDashedLine(117, 63,   0, 63, 'WHITE', 3, true);
+      await oled.drawDashedLine(0,   53,   0,  0, 'WHITE', 4, true);
+      await oled.drawDashedLine(1,   53,   1,  0, 'BLACK', 4, true);
+      await oled.drawDashedLine(0,    0, 127, 63, 'WHITE', 0, true);
+    });
+
     test.skip('drawLine', async() => {
       await oled.drawLine(10, 0, 127, 0, 'WHITE', true);
       await oled.drawLine(127, 10, 127, 63, 'WHITE', true);
       await oled.drawLine(117, 63, 0, 63, 'WHITE', true);
       await oled.drawLine(0, 53, 0, 0, 'WHITE', true);
+    });
+
+    test('drawDashedRect', async() => {
+      await oled.drawDashedRect(0, 0, 128, 64, 'WHITE', 1, true);
+      await oled.drawDashedRect(10, 10, 20, 20, 'WHITE', 2, true);
+      await oled.drawDashedRect(40, 40, 20, 20, 'WHITE', 3, true);
+      await oled.drawDashedRect(62, 10, 20, 20, 'WHITE', 4, true);
+      await oled.drawDashedRect(94, 30, 20, 20, 'WHITE', 5, true);
     });
 
     test.skip('drawRect', async() => {
@@ -63,6 +80,14 @@ suite('Oled', () => {
         [126, 10, 'WHITE'],
         [117, 62, 'WHITE'],
       ], true);
+      await oled.drawRect(94, 30, 20, 20, 'WHITE', true);
+    });
+
+    test.skip('fillDashedRect', async() => {
+      await oled.fillDashedRect(0,  0, 32, 64, 'WHITE', 0, true);
+      await oled.fillDashedRect(31, 0, 32, 64, 'WHITE', 1, true);
+      await oled.fillDashedRect(63, 0, 32, 64, 'WHITE', 2, true);
+      await oled.fillDashedRect(95, 0, 32, 64, 'WHITE', 3, true);
     });
 
     test.skip('fillRect', async() => {
@@ -78,6 +103,7 @@ suite('Oled', () => {
         [117, 63, 'BLACK'],
       ], true);
       await oled.drawLine(0, 63, 127, 0, 'BLACK', true);
+      await oled.fillRect(104, 40, 20, 20, 'BLACK', true);
     });
 
     test.skip('overwrite', async() => {
@@ -95,7 +121,7 @@ suite('Oled', () => {
       await oled.drawCircle(63, 32, 31, 'WHITE', true);
     });
 
-    test('drawBitmap', done => {
+    test.skip('drawBitmap', done => {
       fs.createReadStream('tests/images/mono-128x64.png')
       .pipe(new PngJs())
       .on('parsed', data => {
