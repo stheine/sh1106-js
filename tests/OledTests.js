@@ -1,10 +1,13 @@
 'use strict';
 
-const assert = require('assertthat');
-const delay  = require('delay');
-const rpio   = require('rpio');
+const fs       = require('fs');
 
-const Oled   = require('../');
+const assert   = require('assertthat');
+const delay    = require('delay');
+const PngJs    = require('pngjs').PNG;
+const rpio     = require('rpio');
+
+const Oled     = require('../');
 
 suite('Oled', () => {
   test('is a function', async() => {
@@ -77,7 +80,7 @@ suite('Oled', () => {
       await oled.drawLine(0, 63, 127, 0, 'BLACK', true);
     });
 
-    test('overwrite', async() => {
+    test.skip('overwrite', async() => {
       await oled.fillRect(120, 0, 8, 64, 'WHITE', false);
       await oled.fillRect(121, 1, 6, 62, 'BLACK', false);
       await oled.fillRect(121, 10, 6, 30, 'WHITE', true);
@@ -90,6 +93,21 @@ suite('Oled', () => {
 
     test.skip('drawCircle', async() => {
       await oled.drawCircle(63, 32, 31, 'WHITE', true);
+    });
+
+    test('drawBitmap', done => {
+      fs.createReadStream('tests/images/mono-128x64.png')
+      .pipe(new PngJs())
+      .on('parsed', data => {
+        const dataChannel4 = [];
+
+        for(let i = 0; i < data.length; i += 4) {
+          dataChannel4.push(data[i]);
+        }
+
+        oled.drawBitmap(dataChannel4);
+        done();
+      });
     });
   });
 });
