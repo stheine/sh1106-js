@@ -1,13 +1,14 @@
 'use strict';
 
-const fs       = require('fs');
+const fs     = require('fs');
 
-const assert   = require('assertthat');
-const delay    = require('delay');
-const PngJs    = require('pngjs').PNG;
-const rpio     = require('rpio');
+const assert = require('assertthat');
+const delay  = require('delay');
+const font   = require('oled-font-5x7');
+const PngJs  = require('pngjs').PNG;
+const rpio   = require('rpio');
 
-const Oled     = require('../');
+const Oled   = require('../');
 
 suite('Oled', () => {
   test('is a function', async() => {
@@ -64,7 +65,7 @@ suite('Oled', () => {
       await oled.drawLine(0, 53, 0, 0, 'WHITE', true);
     });
 
-    test('drawDashedRect', async() => {
+    test.skip('drawDashedRect', async() => {
       await oled.drawDashedRect(0, 0, 128, 64, 'WHITE', 1, true);
       await oled.drawDashedRect(10, 10, 20, 20, 'WHITE', 2, true);
       await oled.drawDashedRect(40, 40, 20, 20, 'WHITE', 3, true);
@@ -134,6 +135,13 @@ suite('Oled', () => {
         oled.drawBitmap(dataChannel4);
         done();
       });
+    });
+
+    test('writeString', async() => {
+      await oled.setCursor(0, 0);
+      await oled.writeString(font, 1, 'abcdefghijklmnopqrstuvwxyz', 'WHITE', false, 0, true);
+      await oled.setCursor(0, 57);
+      await oled.writeString(font, 1, '12345678901234567890', 'WHITE', false, 0, true);
     });
   });
 });

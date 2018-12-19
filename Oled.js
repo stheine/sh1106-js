@@ -389,7 +389,7 @@ class Oled {
       const y = el[1];
       const color = el[2];
 
-      if(x > WIDTH || y > HEIGHT) {
+      if(x >= WIDTH || y >= HEIGHT) {
         return;
       }
 
