@@ -51,11 +51,7 @@ class Oled {
 
     this.rpio.i2cBegin();
     this.rpio.i2cSetSlaveAddress(opts.address || 0x3C);
-    this.rpio.i2cSetBaudRate(1000000);
-
-    // Cursor position for text
-    this.cursorX = 0;
-    this.cursorY = 0;
+    this.rpio.i2cSetBaudRate(1800000);
   }
 
   async initialize() {
@@ -106,99 +102,26 @@ class Oled {
     }
   }
 
-//  // read a byte from the oled
-//  _readI2C(fn) {
-//    this.wire.readByte((err, data) => {
-//      if(err) {
-//        throw err;
-//      }
-//
-//      fn(data);
-//    });
-//  }
-
-  // sometimes the oled gets a bit busy with lots of bytes.
-  // Read the response byte to see if this is the case
-  _waitUntilReady() {
-//    // TODO
-//    // not sure if this might still be required,
-//    // or if has been obsoleted by async/await handling in wire.writeBytes!?
-//    return;
-//
-//    /* eslint-disable no-unreachable */
-//    return new Promise(resolve => {
-//      const tick = () => {
-//        this._readI2C(byte => {
-//          // read the busy byte in the response
-//          const busy = byte >> 7 & 1;
-//
-//          if(busy) {
-//            process.nextTick(tick);
-//          } else {
-//            // if not busy, it's ready for callback
-//            return resolve();
-//          }
-//        });
-//      };
-//
-//      process.nextTick(tick);
-//    });
-//    /* eslint-enable no-unreachable */
-  }
-
-  // set starting position of a text string on the oled
-  setCursor(x, y) {
-    this.cursorX = x;
-    this.cursorY = y;
-  }
-
   // write text to the oled
-  async writeString(font, size, string, color, wrap, linespacing, sync = true) {
-    const wordArr = string.split(' ');
-    const len = wordArr.length;
-    // start x offset at cursor pos
-    let   offset   = this.cursorX;
+  async writeString(x, y, font, string, color, sync = true) {
+    // start x offset
+    let   offset   = x;
     let   padding  = 0;
     const letspace = 1;
-    const leading  = linespacing || 2;
 
-    // loop through words
-    for(let w = 0; w < len; w += 1) {
-      // put the word space back in
-      wordArr[w] += ' ';
-      const stringArr = wordArr[w].split('');
-      const slen      = stringArr.length;
-      const compare   = (font.width * size * slen) + (size * (len - 1));
+    // loop through string
+    const stringArr = string.split('');
 
-      // wrap words if necessary
-      if(wrap && len > 1 && (offset >= (WIDTH - compare))) {
-        offset = 1;
-        this.cursorY += (font.height * size) + size + leading;
-        this.setCursor(offset, this.cursorY);
-      }
-
-      // loop through the array of each char to draw
-      for(let i = 0; i < slen; i += 1) {
-        // look up the position of the char, pull out the buffer slice
-        const charBuf = this._findCharBuf(font, stringArr[i]);
-        // read the bits in the bytes that make up the char
-        const charBytes = this._readCharBytes(charBuf);
-
+    // loop through the array of each char to draw
+    for(let i = 0; i < stringArr.length; i += 1) {
+      if(offset < WIDTH) {
         // draw the entire character
-        this._drawChar(font, charBytes, size, color);
-
-        // calc new x position for the next char, add a touch of padding too if it's a non space char
-        padding = stringArr[i] === ' ' ? 0 : size + letspace;
-        offset += (font.width * size) + padding;
-
-        // wrap letters if necessary
-        if(wrap && (offset >= (WIDTH - font.width - letspace))) {
-          offset = 1;
-          this.cursorY += (font.height * size) + size + leading;
-        }
-        // set the 'cursor' for the next char to be drawn, then loop again for next char
-        this.setCursor(offset, this.cursorY);
+        this._drawChar(offset, y, font, stringArr[i], color);
       }
+
+      // calc new x position for the next char, add a touch of padding too if it's a non space char
+      padding = stringArr[i] === ' ' ? 0 : letspace;
+      offset += font.width + padding;
     }
 
     if(sync) {
@@ -207,46 +130,46 @@ class Oled {
   }
 
   // draw an individual character to the screen
-  _drawChar(font, byteArray, size, color) {
-    // take your positions...
-    const x = this.cursorX;
-    const y = this.cursorY;
+  _drawChar(x, y, font, char, color) {
+    // look up the position of the char, pull out the buffer slice
+    const charBuf = this._findCharBuf(font, char);
+    // read the bits in the bytes that make up the char
+    const byteArray = this._readCharBytes(charBuf);
 
-    let   pagePos = 0;
-    let   c = 0;
+    let pagePos;
+    let c = 0;
 
     // loop through the byte array containing the hexes for the char
-    for(let i = 0; i < byteArray.length; i += 1) {
+    for(let i = 0; i < byteArray.length; i++) {
       pagePos = Math.floor(i / font.width) * 8;
-      for(let j = 0; j < 8; j += 1) {
+      for(let j = 0; j < 8; j++) {
+        if(j + pagePos === font.height) {
+          break;
+        }
+
         // pull color out
         let setColor = byteArray[i][j];
-        let xpos;
-        let ypos;
 
         if(color === 'BLACK' || !color) {
           setColor = !setColor;
         }
 
-        // standard font size
-        if(size === 1) {
-          xpos = x + c;
-          ypos = y + j + pagePos;
-          this.drawPixel([xpos, ypos, setColor], false);
-        } else {
-          // MATH! Calculating pixel size multiplier to primitively scale the font
-          xpos = x + (i * size);
-          ypos = y + (j * size);
-          this.fillRect(xpos, ypos, size, size, setColor, false);
-        }
+        const xpos = x + c;
+        const ypos = y + j + pagePos;
+
+        this.drawPixel([xpos, ypos, setColor], false);
       }
-      c = c < font.width - 1 ? c += 1 : 0;
+      if(c < font.width - 1) {
+        c++;
+      } else {
+        c = 0;
+      }
     }
   }
 
   // get character bytes from the supplied font object in order to send to framebuffer
   _readCharBytes(byteArray) {
-    let   bitArr = [];
+    let   bitArr     = [];
     const bitCharArr = [];
 
     // loop through each byte supplied for a char
@@ -273,7 +196,7 @@ class Oled {
 
   // find where the character exists within the font object
   _findCharBuf(font, c) {
-    const charLength = Math.ceil((font.width * font.height) / 8);
+    const charLength = font.width * Math.ceil(font.height / 8);
     // use the lookup array as a ref to find where the current char bytes start
     const cBufPos = font.lookup.indexOf(c) * charLength;
     // slice just the current char's bytes out of the fontData array and return
@@ -284,9 +207,6 @@ class Oled {
 
   // send the entire framebuffer to the oled
   async update(startPage = 0, endPage = MAX_PAGE_COUNT - 1) {
-    // wait for oled to be ready
-    await this._waitUntilReady();
-
     for(let index = startPage; index <= endPage; index++) {
       const displaySeq = [
         SET_PAGE_ADDRESS + index,
@@ -389,7 +309,7 @@ class Oled {
       const y = el[1];
       const color = el[2];
 
-      if(x >= WIDTH || y >= HEIGHT) {
+      if(x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) {
         return;
       }
 
@@ -428,9 +348,6 @@ class Oled {
   // looks at dirty bytes, and sends the updated bytes to the display
   async _updateDirtyBytes(byteArray) {
     const blen = byteArray.length;
-
-    await this._waitUntilReady();
-
     let   pageStart = Infinity;
     let   pageEnd = 0;
     let   any = false;
@@ -675,8 +592,6 @@ class Oled {
       default:
         throw new Error(`Unhandled dir ${dir}`);
     }
-
-    await this._waitUntilReady();
 
     if(dir === 'right' || dir === 'left') {
       cmdSeq.push(
