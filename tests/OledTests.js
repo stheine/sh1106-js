@@ -4,9 +4,11 @@ const fs     = require('fs');
 
 const assert = require('assertthat');
 const delay  = require('delay');
-const font   = require('oled-font-5x7');
+const font7  = require('oled-font-5x7');
 const PngJs  = require('pngjs').PNG;
 const rpio   = require('rpio');
+
+const font16 = require('./oled-js-font-Consolas-16.js');
 
 const Oled   = require('../');
 
@@ -137,11 +139,82 @@ suite('Oled', () => {
       });
     });
 
-    test('writeString', async() => {
-      await oled.setCursor(0, 0);
-      await oled.writeString(font, 1, 'abcdefghijklmnopqrstuvwxyz', 'WHITE', false, 0, true);
-      await oled.setCursor(0, 57);
-      await oled.writeString(font, 1, '12345678901234567890', 'WHITE', false, 0, true);
+    test.skip('writeString', async() => {
+      const font = font7;
+
+      await oled.writeString(0, 0, font, 'abcdefghijklmnopqrstuvwxyz', 'WHITE', false);
+      await oled.writeString(0, 57, font, '12345678901234567890', 'WHITE', false);
+
+      await oled.update();
+    });
+
+    test.skip('char', async() => {
+      const font = font16;
+
+      const drawChar = async function(x, y, char, color = 'WHITE', box = false) {
+        await oled.writeString(x, y, font, char, color, false);
+
+        if(box) {
+          await oled.drawLine(x - 5, y - 2, x + font.width + 5, y - 2, 'WHITE', false);
+          await oled.drawLine(x - 5, y + font.height + 1, x + font.width + 5, y + font.height + 1, 'WHITE', false);
+          await oled.drawLine(x - 2,  y - 5, x - 2, y + font.height + 5, 'WHITE', false);
+          await oled.drawLine(x + font.width + 1,  y - 5, x + font.width + 1, y + font.height + 5, 'WHITE', false);
+        }
+      };
+
+      await drawChar(5, 5, '@', 'BLACK', true);
+      await drawChar(20, 0, 'Q');
+      await drawChar(30, 0, 'F');
+      await drawChar(40, 0, 'G');
+      await drawChar(50, 0, 'g');
+      await drawChar(70, 5, 'g', 'BLACK', true);
+      await drawChar(20, 20, '[');
+      await drawChar(30, 20, ']');
+      await drawChar(40, 20, '{');
+      await drawChar(50, 20, '}');
+
+      await oled.update();
+    });
+
+    test.skip('simple box scrolling', async function() {
+      this.timeout(15000);
+
+      for(let x = 120; x >= 0; x--) {
+        await oled.fillRect(x, 8, 5, 5, 'WHITE', false);
+        await oled.drawLine(x + 5, 8, x + 5, 13, 'BLACK');
+        await oled.update();
+        await delay(20);
+      }
+    });
+
+    test.skip('simple scrolling', async function() {
+      this.timeout(15000);
+
+      const font = font16;
+
+      for(let x = 128 - font.width; x >= 0; x--) {
+        await oled.writeString(x, 8, font, 'A', 'WHITE', false);
+        await oled.drawLine(x + font.width, 8, x + font.width, 8 + font.height, 'BLACK');
+//        await oled.fillRect(x + font.width, 8, font.width, font.height, 'WHITE', false);
+        await oled.update();
+        await delay(15);
+      }
+    });
+
+    test('scrolling', async function() {
+      this.timeout(15000);
+
+      const font = font16;
+
+      const displayString = ' abcdefghijklmnopqrstuvwxyz ';
+
+      for(let i = 0; i < displayString.length * font.width; i++) {
+        const x = -(i % font.width);
+
+        await oled.writeString(x, 8, font, displayString.substring(i / font.width), 'WHITE', false);
+        await oled.update();
+        await delay(30);
+      }
     });
   });
 });
