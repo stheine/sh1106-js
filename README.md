@@ -2,16 +2,16 @@
 
 ## Reference
 
-https://github.com/noopkat/oled-js
-https://www.waveshare.com/w/upload/5/5e/SH1106.pdf
-https://www.velleman.eu/downloads/29/infosheets/sh1106_datasheet.pdf
-https://www.mikrocontroller.net/topic/431371
+- https://github.com/noopkat/oled-js
+- https://www.waveshare.com/w/upload/5/5e/SH1106.pdf
+- https://www.velleman.eu/downloads/29/infosheets/sh1106_datasheet.pdf
+- https://www.mikrocontroller.net/topic/431371
 
 ## What is this?
 
 This library provides APIs for the
 [SH1106 I2C/SPI compatible monochrome OLED display](https://www.amazon.de/gp/product/B078J78R45/)
-[Data sheet](https://www.velleman.eu/downloads/29/infosheets/sh1106_datasheet.pdf).
+([Data sheet](https://www.velleman.eu/downloads/29/infosheets/sh1106_datasheet.pdf)).
 
 It can run on the Raspberry Pi (and probably other systems that have I2C interface).
 
@@ -21,7 +21,10 @@ This library has originated from a fork of [oled-js](https://github.com/noopkat/
 
 Connect the OLED display to the I2C pins:
 
-TODO
+- GND, Pin 6
+- Vcc, 3,3V, Pin 1
+- SDA, Pin 3
+- SCL, Pin 5
 
 ## Use the library
 
