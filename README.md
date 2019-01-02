@@ -1,4 +1,4 @@
-# stheine/sh1106-js
+# sh1106-js
 
 ## Reference
 
@@ -30,7 +30,7 @@ Connect the OLED display to the I2C pins:
 
 ```javascript
 const rpio   = require('rpio');
-const Oled   = require('../sh1106-js/'); // TODO npm module
+const Oled   = require('sh1106-js');
 
 // Rpio
 rpio.init({

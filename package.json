@@ -1,6 +1,6 @@
 {
   "name": "sh1106-js",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "NodeJS library for controlling SH1106 I2C OLED screens on the Raspbery Pi",
   "main": "Oled.js",
   "scripts": {
