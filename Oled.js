@@ -271,8 +271,8 @@ class Oled {
   }
 
   // invert pixels on oled
-  async invertDisplay(bool) {
-    if(bool) {
+  async invertDisplay(invert) {
+    if(invert) {
       await this._transferCmd(SET_REVERSE_DISPLAY); // inverted
     } else {
       await this._transferCmd(SET_NORMAL_DISPLAY); // non inverted
@@ -432,7 +432,7 @@ class Oled {
     await this.drawDashedLine(x0, y0, x1, y1, color, 0, sync);
   }
 
-  // Draw an outlined  rectangle
+  // Draw an outlined rectangle
   async drawDashedRect(x, y, w, h, color, interval, sync = true) {
     const x2 = x + w - 1;
     const y2 = y + h - 1;
@@ -538,83 +538,6 @@ class Oled {
     if(sync) {
       await this._updateDirtyBytes(this.dirtyBytes);
     }
-  }
-
-  // activate scrolling for rows start through stop
-  async startScroll(dir, start, stop) {
-    throw new Error('Scrolling not implemented on SH1106');
-
-    /* eslint-disable no-unreachable */
-    const RIGHT_HORIZONTAL_SCROLL = null;
-    const LEFT_HORIZONTAL_SCROLL = null;
-    const SET_VERTICAL_SCROLL_AREA = null;
-    const VERTICAL_AND_LEFT_HORIZONTAL_SCROLL = null;
-    const ACTIVATE_SCROLL = null;
-    const VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL = null;
-
-    const cmdSeq = [];
-
-    switch(dir) {
-      case 'right':
-        cmdSeq.push(RIGHT_HORIZONTAL_SCROLL);
-        break;
-      case 'left':
-        cmdSeq.push(LEFT_HORIZONTAL_SCROLL);
-        break;
-      case 'left diagonal':
-        cmdSeq.push(
-          SET_VERTICAL_SCROLL_AREA,
-          0x00,
-          HEIGHT,
-          VERTICAL_AND_LEFT_HORIZONTAL_SCROLL,
-          0x00,
-          start,
-          0x00,
-          stop,
-          0x01,
-          ACTIVATE_SCROLL
-        );
-        break;
-      case 'right diagonal':
-        cmdSeq.push(
-          SET_VERTICAL_SCROLL_AREA,
-          0x00,
-          HEIGHT,
-          VERTICAL_AND_RIGHT_HORIZONTAL_SCROLL,
-          0x00,
-          start,
-          0x00,
-          stop,
-          0x01,
-          ACTIVATE_SCROLL
-        );
-        break;
-      default:
-        throw new Error(`Unhandled dir ${dir}`);
-    }
-
-    if(dir === 'right' || dir === 'left') {
-      cmdSeq.push(
-        0x00, start,
-        0x00, stop,
-        0x00, 0xFF,
-        ACTIVATE_SCROLL
-      );
-    }
-
-    await this._transferCmd(cmdSeq);
-    /* eslint-enable no-unreachable */
-  }
-
-  // stop scrolling display contents
-  async stopScroll() {
-    throw new Error('Scrolling not implemented on SH1106');
-
-    /* eslint-disable no-unreachable */
-    const DEACTIVATE_SCROLL = null;
-
-    await this._transferCmd(DEACTIVATE_SCROLL); // stahp
-    /* eslint-enable no-unreachable */
   }
 }
 

@@ -38,11 +38,24 @@ suite('Oled', () => {
       assert.that(oled).is.ofType('object');
     });
 
+    test.skip('turnOffDisplay/turnOnDisplay', async() => {
+      await oled.fillRect(20, 10, 40, 30, 'WHITE', true);
+      await delay(1000);
+      await oled.turnOffDisplay();
+      await delay(1000);
+      await oled.turnOnDisplay();
+    });
+
     test.skip('invertDisplay', async() => {
+      await oled.fillRect(20, 10, 40, 30, 'WHITE', true);
       await oled.invertDisplay(true);
     });
 
-    test.skip('drawPixel', async() => {
+    test.skip('drawPixel, one', async() => {
+      await oled.drawPixel([10, 10, 'WHITE'], true);
+    });
+
+    test.skip('drawPixel, multiple', async() => {
       await oled.drawPixel([
         [0, 0, 'WHITE'],
         [0, 63, 'WHITE'],
@@ -86,11 +99,15 @@ suite('Oled', () => {
       await oled.drawRect(94, 30, 20, 20, 'WHITE', true);
     });
 
-    test.skip('fillDashedRect', async() => {
-      await oled.fillDashedRect(0,  0, 32, 64, 'WHITE', 0, true);
-      await oled.fillDashedRect(31, 0, 32, 64, 'WHITE', 1, true);
-      await oled.fillDashedRect(63, 0, 32, 64, 'WHITE', 2, true);
-      await oled.fillDashedRect(95, 0, 32, 64, 'WHITE', 3, true);
+    test('fillDashedRect', async() => {
+      await oled.fillDashedRect(0,   0, 32, 32, 'WHITE', 0, true);
+      await oled.fillDashedRect(31,  0, 32, 32, 'WHITE', 1, true);
+      await oled.fillDashedRect(63,  0, 32, 32, 'WHITE', 2, true);
+      await oled.fillDashedRect(95,  0, 32, 32, 'WHITE', 3, true);
+      await oled.fillDashedRect(0,  32, 32, 32, 'WHITE', 4, true);
+      await oled.fillDashedRect(31, 32, 32, 32, 'WHITE', 5, true);
+      await oled.fillDashedRect(63, 32, 32, 32, 'WHITE', 6, true);
+      await oled.fillDashedRect(95, 32, 32, 32, 'WHITE', 7, true);
     });
 
     test.skip('fillRect', async() => {
@@ -201,7 +218,7 @@ suite('Oled', () => {
       }
     });
 
-    test('scrolling', async function() {
+    test.skip('scrolling', async function() {
       this.timeout(15000);
 
       const font = font16;
