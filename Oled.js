@@ -35,7 +35,7 @@ class Oled {
     this.HEIGHT         = opts.height || 64;
     this.WIDTH          = opts.width || 128;
     this.DATA_SIZE      = opts.dataSize || 16;
-    this.MAX_PAGE_COUNT = opts.maxPageCount || 8;
+    this.MAX_PAGE_COUNT = opts.maxPageCount || (this.HEIGHT / 8);
 
     // new blank buffer
     // init with 0xff to make sure that the inital clearDisplay() call will update all pixels.
