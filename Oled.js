@@ -6,11 +6,6 @@
 /* eslint-disable class-methods-use-this */
 
 /* eslint-disable no-unused-vars */
-const HEIGHT         = 64;
-const WIDTH          = 128;
-const DATA_SIZE      = 16;
-const MAX_PAGE_COUNT = 8;
-
 const SET_DISPLAY_START_LINE           = 0x40;
 const DISPLAY_OFF                      = 0xAE;
 const DISPLAY_ON                       = 0xAF;
@@ -37,9 +32,14 @@ class Oled {
   constructor(opts) {
     opts = opts || {};
 
+    this.HEIGHT         = opts.height || 64;
+    this.WIDTH          = opts.width || 128;
+    this.DATA_SIZE      = opts.dataSize || 16;
+    this.MAX_PAGE_COUNT = opts.maxPageCount || 8;
+
     // new blank buffer
     // init with 0xff to make sure that the inital clearDisplay() call will update all pixels.
-    this.buffer     = Buffer.alloc((WIDTH * HEIGHT) / 8, 0xff);
+    this.buffer     = Buffer.alloc((this.WIDTH * this.HEIGHT) / 8, 0xff);
     this.dirtyBytes = [];
 
     if(!opts.rpio) {
@@ -92,8 +92,8 @@ class Oled {
   }
 
   async _transferData(data) {
-    for(let i = 0; i < data.length; i += DATA_SIZE) {
-      const slice = data.slice(i, i + DATA_SIZE);
+    for(let i = 0; i < data.length; i += this.DATA_SIZE) {
+      const slice = data.slice(i, i + this.DATA_SIZE);
       const transfer = Buffer.allocUnsafe(slice.length + 1);
 
       transfer[0] = 0x40;
@@ -114,7 +114,7 @@ class Oled {
 
     // loop through the array of each char to draw
     for(let i = 0; i < stringArr.length; i += 1) {
-      if(offset < WIDTH) {
+      if(offset < this.WIDTH) {
         // draw the entire character
         this._drawChar(offset, y, font, stringArr[i], color);
       }
@@ -206,7 +206,7 @@ class Oled {
   }
 
   // send the entire framebuffer to the oled
-  async update(startPage = 0, endPage = MAX_PAGE_COUNT - 1) {
+  async update(startPage = 0, endPage = this.MAX_PAGE_COUNT - 1) {
     for(let index = startPage; index <= endPage; index++) {
       const displaySeq = [
         SET_PAGE_ADDRESS + index,
@@ -218,8 +218,8 @@ class Oled {
       await this._transferCmd(displaySeq);
 
       // write buffer data
-      const start = index * WIDTH;
-      const end   = start + WIDTH;
+      const start = index * this.WIDTH;
+      const end   = start + this.WIDTH;
       const slice = this.buffer.slice(start, end);
 
       await this._transferData(Buffer.from([0x00, 0x00])); // there are two pixels per page, not shown
@@ -285,8 +285,8 @@ class Oled {
     let   y;
 
     for(let i = 0; i < pixels.length; i++) {
-      x = Math.floor(i % WIDTH);
-      y = Math.floor(i / WIDTH);
+      x = Math.floor(i % this.WIDTH);
+      y = Math.floor(i / this.WIDTH);
 
       this.drawPixel([x, y, pixels[i]], false);
     }
@@ -309,7 +309,7 @@ class Oled {
       const y = el[1];
       const color = el[2];
 
-      if(x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) {
+      if(x < 0 || x >= this.WIDTH || y < 0 || y >= this.HEIGHT) {
         return;
       }
 
@@ -324,7 +324,7 @@ class Oled {
       if(page === 0) {
         byte = x;
       } else {
-        byte = x + (WIDTH * page);
+        byte = x + (this.WIDTH * page);
       }
 
       // colors! Well, monochrome.
@@ -357,7 +357,7 @@ class Oled {
       const b = byteArray[i];
 
       if(b >= 0 && b < this.buffer.length) {
-        const page = b / WIDTH | 0;
+        const page = b / this.WIDTH | 0;
 
         if(page < pageStart) {
           pageStart = page;
